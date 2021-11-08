@@ -2,11 +2,11 @@
 	.data
 #file_name: .space 64
 file_name: .ascii "bmptest.bmp"
-file_buffer: .space 150000
-header: .space 54
+file_buffer: .space 800000
 start_message: .asciiz "Input bmp file name: "
 read_error: .asciiz "File read failed"
 out_name: .asciiz "out.bmp"
+header: .space 54
 	.text
 	.globl main
 main:
@@ -53,10 +53,17 @@ main:
 	move $a0, $s1
 	syscall
 	
-	#lhu $s3, header+18	# s3 = bitmap width
-	#lhu $s4, header+20
+	lw $s3, header+18	# s3 = bitmap width
+	lw $s4, header+22	# s4 = bitmap length
 	
-	li $v0, 10
+	abs $s4, $s4		#left-right, top-bottom
+	
+	mul $t0, $s3, 3		#width in bytes
+	andi $t1, $t0, 3	#(width in bytes) % 4
+	li $t2, 4
+	subu $s5, $t2, $t1	# s5 = padding
+	
+	li $v0, 10	#exit
 	syscall
 	
 file_read_error:
