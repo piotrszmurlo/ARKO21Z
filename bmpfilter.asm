@@ -122,7 +122,10 @@ main:
 	lw $a1, file_buffer
 	move $a2, $s6
 	syscall
-
+#close input file
+	li $v0, 16
+	move $a0, $s0		#close file
+	syscall
 #copy file buffer into copy buffer
 	li $t0, 0
 	lw $t1, file_buffer
@@ -136,6 +139,37 @@ copy_buffer_loop:
 	blt $t0, $s6, copy_buffer_loop
 
 #######################################
+#s1 = output file descriptor; s3 = bitmap width - 2; s4 = bitmap height - 2; s5 = bytes per row;
+	addiu $s3, $s3, -2	#s3 = bitmap width - 2
+	addiu $s4, $s4, -2	#s4 = bitmap height - 2
+	li $a0, 2		#start y = 2
+	li $a1, 2		#start x = 2
+	li $a2, 0		#color: 0 -> B, 1 -> G, 2 -> R
+filter_pixel:
+#a0 - y; a1 - x; a2 = color
+	li $s0, 0		#s0 - sum of color values
+	addiu $a0, -2		#move to (0,0)
+	addiu $s1, -2
+#5 max values init
+	li $t0, 0
+	li $t1, 0
+	li $t2, 0
+	li $t3, 0
+	li $t4, 0
+#5 min values init
+	li $s6, 255
+	li $s7, 255
+	li $t5, 255
+	li $t6, 255
+	li $t7, 255
+loop:
+	mul $t8, $s5, $a0	#t8 = bytes per row * y
+	mul $t9, $a1, 3		#t9 = 3*x
+	addu $t8, $t8, $t9	#t8 = 3*x + bytes per row * y
+	addu $t8, $t8, $a2	#t8 = 3*x + bytes per row * y + color offset
+	li $a3, 5
+	
+	
 
 
 
