@@ -145,6 +145,11 @@ copy_buffer_loop:
 	li $a0, 2		#start y = 2
 	li $a1, 2		#start x = 2
 	li $a2, 0		#color: 0 -> B, 1 -> G, 2 -> R
+loop_row:
+	li $a2, 0
+loop_column:
+	li $a1, 2
+
 filter_pixel:
 #a0 - y; a1 - x; a2 = color
 	li $s0, 0		#s0 - sum of color values
@@ -167,8 +172,47 @@ loop:
 	mul $t9, $a1, 3		#t9 = 3*x
 	addu $t8, $t8, $t9	#t8 = 3*x + bytes per row * y
 	addu $t8, $t8, $a2	#t8 = 3*x + bytes per row * y + color offset
-	li $a3, 5
-	
+	lw $t9, file_buffer
+	addu $t8, $t8, $t9	#t8 = pixel address
+	li $a3, 0
+find_color:
+	lbu $t9, ($t8)		#load pixel color value
+	addu $s0, $s0, $t9	#add color value to sum
+#compare and find 5 maximum values
+	ble $t9, $t0, next	
+	move $t0, $t9
+	ble $t9, $t1, next
+	move $t0, $t1
+	move $t1, $t9
+	ble $t9, $t2, next
+	move $t1, $t2
+	move $t2, $t9
+	ble $t9, $s3, next
+	move $t2, $t3
+	move $t3, $t9
+	ble $t9, $t4, next
+	move $t3, $t4
+	move $t4, $t9
+next:
+#compare and find 5 minimum values
+	bge $t9, $s6, next_1
+	move $s6, $t9
+	bge $t9, $s7, next_1
+	move $s6, $s7
+	move $s7, $t9
+	bge $t9, $t5, next_1
+	move $s7, $t5
+	move $t5, $t9
+	bge $t9, $t6, next_1
+	move $t5, $t6
+	move $t6, $t9
+	bge $t9, $t7, next_1
+	move $t6, $t7
+	move $t7, $t9
+next_1:
+	addiu $a3, $a3, 1	#increment counter
+	addiu $t8, $t8, 3	#next pixel
+	bne $a3, 5, find_color
 	
 
 
