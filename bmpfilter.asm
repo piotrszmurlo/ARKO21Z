@@ -1,8 +1,8 @@
 .eqv HEADER_SIZE 54
 	.data
 
-file_buffer: .space 800000
-file_buffer_copy: .space 800000
+file_buffer: .space 4
+file_buffer_copy: .space 4
 	
 header: 
 	.align 2
@@ -69,9 +69,25 @@ main:
 	li $a2, 52
 	syscall
 	
-
+	lw $s6, header		# s6 = file size in bytes
+	addiu $s6, $s6, -54
 	lw $s3, header+16	# s3 = bitmap width
 	lw $s4, header+20	# s4 = bitmap height
+	
+	###read file size in bytes
+	li $v0, 1
+	move $a0, $s6
+	syscall
+	###
+	
+	li $v0, 9 		#allocate buffer based on file siez
+	move $a0, $s6		
+	syscall
+	sw $v0, file_buffer	#store pointer in file_buffer
+	li $v0, 9 		#allocate buffer copy based on file size
+	move $a0, $s6		#
+	syscall
+	sw $v0, file_buffer_copy#store pointer in file_buffer_copy
 	
 	
 	abs $s4, $s4		#left-right, top-bottom
@@ -81,22 +97,23 @@ main:
 	li $t2, 4
 	subu $t3, $t2, $t1	# t3 = padding
 	addu $s5, $t0, $t3	# s5 = width + padding(bytes)
-	mul $s6, $s5, $s4 	# s6 = 
-	mul $s6, $s6, 3	# s6 = number of bytes pixels (with padding)
 	
 	li $v0, 14
 	move $a0, $s0
-	la $a1, file_buffer	#read input file pixel bytes into file_buffer
-	li $a2, 799946	
+	lw $a1, file_buffer	#read input file pixel bytes into file_buffer
+	move $a2, $s6
 	syscall
 
+
 	li $t0, 0
-
+	lw $t1, file_buffer
+	lw $t2 file_buffer_copy
 copy_buffer_loop:
-	lw $t1, file_buffer($t0)
-	sw $t1, file_buffer_copy($t0)
+	lw $t3, ($t1)
+	sw $t3, ($t2)
+	addiu $t1, $t1, 4
+	addiu $t2, $t2, 4
 	addiu $t0, $t0, 4
-
 	blt $t0, $s6, copy_buffer_loop
 
 
@@ -105,8 +122,8 @@ copy_buffer_loop:
 write: 
 	li $v0, 15
 	move $a0, $s1		#write file_buffer to outfile
-	la $a1, file_buffer	
-	li $a2, 799946
+	lw $a1, file_buffer	
+	move $a2, $s6
 	syscall
 
 	li $v0, 16
