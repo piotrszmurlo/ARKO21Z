@@ -218,9 +218,13 @@ calculate_avg:
 	addu $t3, $t3, $a2	#t3 = 3*x + y * bytes per row + color offset
 	lw $t2, file_buffer
 	addu $t3, $t3, $t2	#t3 = final pixel color address in file_buffer (actual pixel to modify)
-	sb $t4, ($t3)
-	
-	
+	sb $t4, ($t3)		#write new pixel color value to file_buffer
+	addiu $a2, $a2, 1	#increment color offset
+	blt $a2, 3, find_address#loop for remaining colors
+	addiu $a0, $a0, 1	#increment x coordinate
+	ble $a0, $s3, next_col	#next column if x <= width - 2
+	addiu $a1, $a1, 1	#increment y
+	ble $a1, $s4, next_row	#next row if y <= height - 2 and x <= width - 2
 	
 	
 	
