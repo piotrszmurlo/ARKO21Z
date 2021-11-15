@@ -96,6 +96,7 @@ main:
 	li $v0, 1
 	move $a0, $s4
 	#syscall
+	li $s7, 0
 ########
 
 #dynamically allocate file buffers based on bmp size
@@ -144,100 +145,121 @@ copy_buffer_loop:
 #s1 = output file descriptor; s3 = bitmap width - 2; s4 = bitmap height - 2; s5 = bytes per row;
 	addiu $s3, $s3, -2	#s3 = bitmap width - 2
 	addiu $s4, $s4, -2	#s4 = bitmap height - 2
+	
 	li $a0, 2		#start y = 2
 	li $a1, 2		#start x = 2
 	li $a2, 0		#color: 0 -> B, 1 -> G, 2 -> R
+next_row:
+	li $a1, 2
+next_col:
+	li $a2, 0
 	
 filter_pixel:
 #a0 - y; a1 - x; a2 = color
-	li $s0, 0		#s0 - sum of color values
-	addiu $a0, $a0,-2		#move to (0,0)
-	addiu $a1, $a1 -2		#move to (0,0)
+	#li $s0, 0		#s0 - sum of color values
+	#addiu $a0, $a0,-2		#move to (0,0)
+	#addiu $a1, $a1, -2		#move to (0,0)
 
 loop:
+	lw $t7, file_buffer
 	mul $t8, $s5, $a0	#t8 = bytes per row * y
 	mul $t9, $a1, 3		#t9 = 3*x
 	addu $t8, $t8, $t9	#t8 = 3*x + bytes per row * y
 	addu $t8, $t8, $a2	#t8 = 3*x + bytes per row * y + color offset
-	lw $t9, file_buffer
-	addu $t8, $t8, $t9	#t8 = pixel address
-	li $a3, 0
+	addu $t7, $t8, $t7	#t7 = pixel address to save (file_buffer)	
+	
+	addiu $t1, $a0, -2
+	addiu $t2, $a1, -2
+	
+	
+	mul $t8, $s5, $t1	#t8 = bytes per row * y
+	mul $t9, $t2, 3		#t9 = 3*x
+	addu $t8, $t8, $t9	#t8 = 3*x + bytes per row * y
+	lw $t9, file_buffer_copy
+	addu $t8, $t8, $a2	#t8 = 3*x + bytes per row * y + color offset
+	addu $t8, $t8, $t9	#t8 = pixel address moved down left corner (file_buffer_copy)
+
 load_median_array:
 	lbu $t9, ($t8)		#load pixel color value
-	li $t0, 0 	#t0 = median_array index*4
-	li $t3, 0	#t3 = row counter
+	li $t3, 0		#t3 = row counter
 	li $t2, 0
 median_array_loop:
-	lb $t1, ($t8)
+	lbu $t1, ($t8)
 	sb $t1, median_array($t2)	#load (0,x)
 	addiu $t2, $t2, 1
 	
-	lb $t1, 3($t8)
+	lbu $t1, 3($t8)
 	sb $t1, median_array($t2) 	#load (1,x)
 	addiu $t2, $t2, 1
 	
-	lb $t1, 6($t8)
+	lbu $t1, 6($t8)
 	sb $t1, median_array($t2)	#load (2,x)
 	addiu $t2, $t2, 1
 
-	lb $t1, 9($t8)
+	lbu $t1, 9($t8)
 	sb $t1, median_array($t2)	#load (3,x)
 	addiu $t2, $t2, 1
 	
-	lb $t1, 12($t8)
+	lbu $t1, 12($t8)
 	sb $t1, median_array($t2)	#load (4,x)
 	addiu $t2, $t2, 1
 	
-	addu $a0, $a0, $s5		#a0 -> (0,x+1)
+	addu $t8, $t8, $s5		#a0 -> (0,x+1)
 	addiu $t3, $t3, 1
 	bne $t3, 5, median_array_loop
-	
+
+
+
+
 sort_array:
 	la $t0, median_array
-	addiu $t0, $t0, 24
+	addiu $t0, $t0, 24	#check
 outer_loop:
 	li $t1, 0
-	la $a0, median_array
+	la $t4, median_array
 inner_loop:
-	lb $t2, 0($a0)
-	lb $t3 1($a0)
+	lbu $t2, 0($t4)
+	lbu $t3 1($t4)
 	ble $t2, $t3, continue
 	li $t1, 1
-	sb $t2, 1($a0)
-	sb $t3, 0($a0)
+	sb $t2, 1($t4)
+	sb $t3, 0($t4)
 continue:
-	addiu $a0, $a0, 1
-	bne $a0, $t0, inner_loop
+	addiu $t4, $t4, 1
+	bne $t4, $t0, inner_loop
 	bne $t1, $zero, outer_loop
+
+#calculate average color value
 	li $t0, 5 	#array element offset (index)
 	li $t1, 0	#sum
+	
 calculate_avg:
-	beq $t0, 20, return_avg	#exit?
-	lb $t2, median_array($t0)	#load element
+	lbu $t2, median_array($t0)	#load element
 	add $t1, $t1, $t2	#add element to sum
 	addiu $t0, $t0, 1
-	j calculate_avg
+	bne $t0, 20, calculate_avg
+
 
 return_avg:
-	divu $v0, $t1, 15	#return average
+	divu $t1, $t1, 15	#return average
+	sb $t1, ($t7)		#store pixel
+	beq $s7, 1, exit
+	addiu $a2, $a2, 1	#increment color offset
+	blt $a2, 3, loop
+	addiu $a1, $a1, 1	#a1 - x
+				#s4 - height -2
+				#s3 - width -2
+	li $a2, 0
+	ble $a1, $s3, next_col
+	addiu $a0, $a0, 1	#a0 - y
+	ble $a0, $s4, next_row
 	
 	
-###	test
-	la $t0, median_array
-	li $t1, 0
-print_arr:
-	beq $t1, 25, exit
-	lb $a0, median_array($t1)
-	li $v0, 1
-	addiu $t1, $t1, 1
-	syscall
 	
-	li $v0, 4
-	la $a0, comma
-	syscall
 	
-	j print_arr
-###	test
+	
+
+
 
 
 
@@ -250,7 +272,7 @@ print_arr:
 write: 
 	li $v0, 15
 	move $a0, $s1		#write file_buffer to outfile
-	lw $a1, file_buffer	
+	lw $a1, file_buffer
 	move $a2, $s6
 	syscall
 

@@ -10,7 +10,7 @@ out_name: .asciiz "out.bmp"
 	.align 1
 header: .space 54
 	.align 2
-median_array: .space 25
+median_array: .space 100
 	.text
 	.globl main
 main:
