@@ -11,6 +11,8 @@ start_message: .asciiz "Input bmp file name: "
 read_error: .asciiz "File read failed"
 out_name: .asciiz "out.bmp"
 file_name: .ascii "monalisa.bmp"
+median_array: .space 25
+comma: .ascii ", "
 	.text
 	.globl main
 	
@@ -85,15 +87,15 @@ main:
 #temp###read file size in bytes
 	li $v0, 1
 	move $a0, $s6
-	syscall
+	#syscall
 	
 	li $v0, 1
 	move $a0, $s3
-	syscall
+	#syscall
 	
 	li $v0, 1
 	move $a0, $s4
-	syscall
+	#syscall
 ########
 
 #dynamically allocate file buffers based on bmp size
@@ -145,28 +147,13 @@ copy_buffer_loop:
 	li $a0, 2		#start y = 2
 	li $a1, 2		#start x = 2
 	li $a2, 0		#color: 0 -> B, 1 -> G, 2 -> R
-loop_row:
-	li $a2, 0
-loop_column:
-	li $a1, 2
-
+	
 filter_pixel:
 #a0 - y; a1 - x; a2 = color
 	li $s0, 0		#s0 - sum of color values
-	addiu $a0, -2		#move to (0,0)
-	addiu $s1, -2
-#5 max values init
-	li $t0, 0
-	li $t1, 0
-	li $t2, 0
-	li $t3, 0
-	li $t4, 0
-#5 min values init
-	li $s6, 255
-	li $s7, 255
-	li $t5, 255
-	li $t6, 255
-	li $t7, 255
+	addiu $a0, $a0,-2		#move to (0,0)
+	addiu $a1, $a1 -2		#move to (0,0)
+
 loop:
 	mul $t8, $s5, $a0	#t8 = bytes per row * y
 	mul $t9, $a1, 3		#t9 = 3*x
@@ -175,47 +162,82 @@ loop:
 	lw $t9, file_buffer
 	addu $t8, $t8, $t9	#t8 = pixel address
 	li $a3, 0
-find_color:
+load_median_array:
 	lbu $t9, ($t8)		#load pixel color value
-	addu $s0, $s0, $t9	#add color value to sum
-#compare and find 5 maximum values
-	ble $t9, $t0, next	
-	move $t0, $t9
-	ble $t9, $t1, next
-	move $t0, $t1
-	move $t1, $t9
-	ble $t9, $t2, next
-	move $t1, $t2
-	move $t2, $t9
-	ble $t9, $s3, next
-	move $t2, $t3
-	move $t3, $t9
-	ble $t9, $t4, next
-	move $t3, $t4
-	move $t4, $t9
-next:
-#compare and find 5 minimum values
-	bge $t9, $s6, next_1
-	move $s6, $t9
-	bge $t9, $s7, next_1
-	move $s6, $s7
-	move $s7, $t9
-	bge $t9, $t5, next_1
-	move $s7, $t5
-	move $t5, $t9
-	bge $t9, $t6, next_1
-	move $t5, $t6
-	move $t6, $t9
-	bge $t9, $t7, next_1
-	move $t6, $t7
-	move $t7, $t9
-next_1:
-	addiu $a3, $a3, 1	#increment counter
-	addiu $t8, $t8, 3	#next pixel
-	bne $a3, 5, find_color
+	li $t0, 0 	#t0 = median_array index*4
+	li $t3, 0	#t3 = row counter
+	li $t2, 0
+median_array_loop:
+	lb $t1, ($t8)
+	sb $t1, median_array($t2)	#load (0,x)
+	addiu $t2, $t2, 1
 	
+	lb $t1, 3($t8)
+	sb $t1, median_array($t2) 	#load (1,x)
+	addiu $t2, $t2, 1
+	
+	lb $t1, 6($t8)
+	sb $t1, median_array($t2)	#load (2,x)
+	addiu $t2, $t2, 1
 
+	lb $t1, 9($t8)
+	sb $t1, median_array($t2)	#load (3,x)
+	addiu $t2, $t2, 1
+	
+	lb $t1, 12($t8)
+	sb $t1, median_array($t2)	#load (4,x)
+	addiu $t2, $t2, 1
+	
+	addu $a0, $a0, $s5		#a0 -> (0,x+1)
+	addiu $t3, $t3, 1
+	bne $t3, 5, median_array_loop
+	
+sort_array:
+	la $t0, median_array
+	addiu $t0, $t0, 24
+outer_loop:
+	li $t1, 0
+	la $a0, median_array
+inner_loop:
+	lb $t2, 0($a0)
+	lb $t3 1($a0)
+	ble $t2, $t3, continue
+	li $t1, 1
+	sb $t2, 1($a0)
+	sb $t3, 0($a0)
+continue:
+	addiu $a0, $a0, 1
+	bne $a0, $t0, inner_loop
+	bne $t1, $zero, outer_loop
+	li $t0, 5 	#array element offset (index)
+	li $t1, 0	#sum
+calculate_avg:
+	beq $t0, 20, return_avg	#exit?
+	lb $t2, median_array($t0)	#load element
+	add $t1, $t1, $t2	#add element to sum
+	addiu $t0, $t0, 1
+	j calculate_avg
 
+return_avg:
+	divu $v0, $t1, 15	#return average
+	
+	
+###	test
+	la $t0, median_array
+	li $t1, 0
+print_arr:
+	beq $t1, 25, exit
+	lb $a0, median_array($t1)
+	li $v0, 1
+	addiu $t1, $t1, 1
+	syscall
+	
+	li $v0, 4
+	la $a0, comma
+	syscall
+	
+	j print_arr
+###	test
 
 
 
