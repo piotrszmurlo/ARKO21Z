@@ -1,4 +1,3 @@
-.eqv HEADER_SIZE 54
 	.data
 
 file_buffer: .space 4
@@ -12,7 +11,6 @@ read_error: .asciiz "File read failed"
 out_name: .asciiz "out.bmp"
 file_name: .ascii "monalisa.bmp"
 median_array: .space 25
-comma: .ascii ", "
 	.text
 	.globl main
 	
@@ -128,7 +126,6 @@ copy_buffer_loop:
 	addiu $t0, $t0, 4
 	blt $t0, $s6, copy_buffer_loop
 
-#######################################
 #s1 = output file descriptor; s3 = bitmap width - 2; s4 = bitmap height - 2; s5 = bytes per row;
 	addiu $s3, $s3, -2	#s3 = bitmap width - 2
 	addiu $s4, $s4, -2	#s4 = bitmap height - 2
@@ -185,15 +182,15 @@ load_array_loop:
 
 sort_array:
 	la $t2, median_array
-	addiu $t2, $t2, 24
+	addiu $t2, $t2, 24		#last element address
 outer_loop:
-	li $t3, 0
+	li $t3, 0			#flag
 	la $t4, median_array
 inner_loop:
 	lbu $t5, ($t4)
 	lbu $t6, 1($t4)
 	ble $t5, $t6, continue
-	li $t3, 1
+	li $t3, 1			#need another run
 	sb $t5, 1($t4)
 	sb $t6, ($t4)
 continue:
@@ -225,12 +222,6 @@ calculate_avg:
 	ble $a0, $s3, next_col	#next column if x <= width - 2
 	addiu $a1, $a1, 1	#increment y
 	ble $a1, $s4, next_row	#next row if y <= height - 2 and x <= width - 2
-	
-	
-	
-	
-
-####################################### 
 
 write: 
 	li $v0, 15
