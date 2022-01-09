@@ -119,7 +119,6 @@ filter_pixel:
 	li $s0, 0		#s0 = sum of color values
 	addiu $t1, $a0, -2 	#move to left down corner in pixel's 5x5 matrix (x)
 	addiu $t0, $a1, -2	#move to left down corner in pixel's 5x5 matrix (y)
-	
 find_address:
 	mul $t2, $t0, $s5	#t1 = y * bytes per row
 	mul $t3, $t1, 3		#t3 = 3*x
