@@ -1,3 +1,0 @@
-/home/osboxes/arko_intel/CMakeFiles/rebuild_cache.dir
-/home/osboxes/arko_intel/CMakeFiles/edit_cache.dir
-/home/osboxes/arko_intel/CMakeFiles/test.dir

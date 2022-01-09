@@ -1,1 +1,0 @@
-/usr/bin/cc    CMakeFiles/test.dir/main.c.o CMakeFiles/test.dir/bilinear_interpolation.asm.o  -o test  -lallegro /usr/lib/liballegro_image.so.5.2.8 /usr/lib/liballegro_primitives.so.5.2.8 
