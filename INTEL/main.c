@@ -3,8 +3,8 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_image.h>
 
-#define DISP_WIDTH 800
-#define DISP_HEIGHT 600
+#define DISP_WIDTH 1024
+#define DISP_HEIGHT 768
 #define BM_DECIMAL_VAL 19778
 
 extern void bilinear_interpolation(void *pixel_array, int width, int height, void *scaled_pixel_array_buffer, int scaled_bmp_width, int scaled_bmp_height);
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
             image = al_load_bitmap("result.bmp");
             al_draw_bitmap(image, 0, 0, 0);
             al_flip_display();
-            al_clear_to_color( al_map_rgb(0, 0 ,0) );
+            al_clear_to_color(al_map_rgb(0, 0, 0));
         }
 
         else if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {

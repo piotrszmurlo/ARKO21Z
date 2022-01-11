@@ -3,7 +3,7 @@ project(test C)
 
 set(CMAKE_C_STANDARD 99)
 
-enable_language(ASM_NASM)
+enable_language(C ASM_NASM)
 set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
 
 
@@ -24,5 +24,4 @@ set_target_properties(test PROPERTIES
 target_link_libraries(test PRIVATE allegro
         /usr/lib/liballegro_image.so.5.2.8
         /usr/lib/liballegro_primitives.so.5.2.8)
-
-#TARGET_LINK_LIBRARIES(x86_64  -lmingw32  -lallegro-5.0.10-monolith-md-debug)
+        

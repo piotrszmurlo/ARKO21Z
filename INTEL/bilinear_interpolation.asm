@@ -2,8 +2,9 @@
 ; scaled_pixel_array_buffer = rcx, scaled_bmp_width = r8, scaled_bmp_height = r9
 ; byte_width = [rbp-4], scaled_byte_width = [rbp-8]
 
-section	.text
 global bilinear_interpolation
+
+section .text
 
 bilinear_interpolation:
 
@@ -77,7 +78,7 @@ y:
     subss xmm3, xmm5           ; xmm3 = y_diff
 
     mov eax, r14d              ; eax = y
-    mul DWORD [rbp-4]          ; eax = y*byte_width
+    imul DWORD [rbp-4]          ; eax = y*byte_width
     lea ebx, [r11d+r11d*2]     ; ebx = x*3
     add ebx, eax               ; ebx = x*3 + y*byte_width
     add rbx, rdi               ; rbx = (0,0) pixel address 
@@ -87,7 +88,7 @@ y:
     add r15, rax               ; (0,1) pixel address 
 
     mov eax, r13d              ; eax = scaled_y
-    mul DWORD [rbp-8]          ; eax = scaled_y*scaled_byte_width
+    imul DWORD [rbp-8]          ; eax = scaled_y*scaled_byte_width
     lea r11d, [r12d+r12d*2]    ; scaled_x*3
     add r11d, eax              ; scaled_x*3 + scaled_y*scaled_byte_width
     add r11, rcx               ; r11 = scaled_pixel_address
