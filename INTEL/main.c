@@ -9,6 +9,8 @@
 
 extern void bilinear_interpolation(void *pixel_array, int width, int height, void *scaled_pixel_array_buffer, int scaled_bmp_width, int scaled_bmp_height);
 
+
+
 int main(int argc, char* argv[]) {
 
     if (argc != 2){
@@ -57,9 +59,11 @@ int main(int argc, char* argv[]) {
     }
     ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
     al_install_keyboard();
+    al_install_mouse();
     al_init_image_addon();
 
     al_register_event_source(event_queue, al_get_keyboard_event_source());
+    al_register_event_source(event_queue, al_get_mouse_event_source());
     al_register_event_source(event_queue, al_get_display_event_source(display));
 
     al_clear_to_color(al_map_rgb(0, 0, 0));
@@ -103,6 +107,20 @@ int main(int argc, char* argv[]) {
                     break;
             
             }
+
+        }
+        else if (event.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
+            scaled_bmp_width = event.mouse.x;
+            scaled_bmp_height = event.mouse.y;
+        }
+
+        else if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+                free(pixel_array);
+                al_destroy_display(display);
+                al_destroy_event_queue(event_queue);
+                al_destroy_bitmap(image);
+                return 0;
+        }
             int scaled_pixel_array_size = (3 * scaled_bmp_width + scaled_bmp_width % 4) * scaled_bmp_height;
             void *scaled_pixel_array = malloc(scaled_pixel_array_size);
 
@@ -126,7 +144,7 @@ int main(int argc, char* argv[]) {
 
             bilinear_interpolation(pixel_array, (int) bmp_width, (int) bmp_height, scaled_pixel_array, scaled_bmp_width, scaled_bmp_height);
 
-            fp = fopen("result.bmp", "wb");
+            fp = fopen("temp.bmp", "wb");
             if (fp == NULL) {
                 printf("error opening out file\n");
                 return 0;
@@ -136,20 +154,11 @@ int main(int argc, char* argv[]) {
             fwrite(scaled_pixel_array, 1, scaled_pixel_array_size, fp);
             fclose(fp);
             free(scaled_pixel_array);
-            image = al_load_bitmap("result.bmp");
+            image = al_load_bitmap("temp.bmp");
             al_draw_bitmap(image, 0, 0, 0);
             al_flip_display();
             al_clear_to_color(al_map_rgb(0, 0, 0));
-        }
-
-        else if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
-            exit = true;
-        }
     }
-    free(pixel_array);
-    al_destroy_display(display);
-    al_destroy_event_queue(event_queue);
-    al_destroy_bitmap(image);
    
     return 0;
 }

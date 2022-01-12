@@ -9,7 +9,6 @@ section .text
 bilinear_interpolation:
 
     ; create stack frame
-
     push rbp
     mov rbp, rsp
     sub rsp, 8
@@ -31,15 +30,15 @@ bilinear_interpolation:
     cvtsi2ss xmm2, r9d         ; xmm2 = (float) scaled_height
     divss xmm1, xmm2           ; xmm1 = y_scale
 
-    lea r11d, [esi+esi*2] ; r11 = width*3
+    lea r11d, [esi+esi*2]      ; r11 = width*3
     mov eax, esi        
     and eax, 3                 ; rax = width%4 (padding)
     add r11d, eax              ; r11 = byte_width + padding
     mov [rbp-4], r11d          ; [rbp-4] = byte_width + padding (dword)
 
+    lea r11d, [r8d+r8d*2]      ; r11 = scaled_byte_width
     mov eax, r8d               ; eax = scaled_width
     and eax, 3                 ; eax = scaled_width%4 (padding)
-    lea r11d, [r8d+r8d*2]
     add r11d, eax              ; r11 = scaled_byte_width + padding
     mov [rbp-8], r11d          ; [rbp-8] = scaled_byte_width + padding (dword)
 
@@ -60,45 +59,45 @@ loop_over_scaled_pixel_array:
     cvttss2si r14, xmm3        ; r14 = (int) y
 
     cmp r11d, esi              ; if (x < width) r11 = x
-    jb x                       ; else:
+    jb x_less_width            ; else:
     cvtsi2ss xmm2, esi         ; xmm2 = (float) width
     mov r11d, esi              ; r11 = width
 
-x:
+x_less_width:
     cmp r14d, r10d             ; if (y < height)        r14 = y
-    jb y                       ; else:
+    jb y_less_height           ; else:
     cvtsi2ss xmm3, r10d        ; xmm3 = (float) height
     mov r14d, r10d             ; r14 = height
 
-y:
+y_less_height:
     cvtsi2ss xmm4, r11d        ; xmm4 = (float) x
     cvtsi2ss xmm5, r14d        ; xmm5 = (float) y
-
     subss xmm2, xmm4           ; xmm2 = x_diff
     subss xmm3, xmm5           ; xmm3 = y_diff
 
-    mov eax, r14d              ; eax = y
-    imul DWORD [rbp-4]          ; eax = y*byte_width
     lea ebx, [r11d+r11d*2]     ; ebx = x*3
+    mov eax, r14d              ; eax = y
+    imul DWORD [rbp-4]         ; eax = y*byte_width
     add ebx, eax               ; ebx = x*3 + y*byte_width
     add rbx, rdi               ; rbx = (0,0) pixel address 
 
     mov eax, [rbp-4]           ; eax = byte_width
-    mov r15, rbx               ; r11 = 0,0 pixel address
-    add r15, rax               ; (0,1) pixel address 
+    mov r15, rbx               ; r15 = (0,0) pixel address
+    add r15, rax               ; r15 = (0,1) pixel address 
 
-    mov eax, r13d              ; eax = scaled_y
-    imul DWORD [rbp-8]          ; eax = scaled_y*scaled_byte_width
     lea r11d, [r12d+r12d*2]    ; scaled_x*3
+    mov eax, r13d              ; eax = scaled_y
+    imul DWORD [rbp-8]         ; eax = scaled_y*scaled_byte_width
     add r11d, eax              ; scaled_x*3 + scaled_y*scaled_byte_width
     add r11, rcx               ; r11 = scaled_pixel_address
 
-    xor r14, r14               ; color_offset = 0
 
 ; r14 = color_offset, rbx = (0,0), r11 = (0,1)
 ; r10 = scaled_pix_address, r12 = scaled_x, r13 = scaled_y
 ; rsi = width, r10 = height
 
+    xor r14, r14               ; color_offset = 0
+    
 loop_color:
     movzx edx, BYTE [rbx+r14]  ; edx = color (0,0)
     cvtsi2ss xmm4, edx         ; xmm4 = (float) color (0,0)
